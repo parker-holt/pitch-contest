@@ -11,19 +11,17 @@ export async function GET(req: NextRequest) {
   if (judgeSnap.empty) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
 
   const judgeDoc = judgeSnap.docs[0]
-  const judge = { id: judgeDoc.id, ...judgeDoc.data() }
+  const judgeData = judgeDoc.data() as { name: string; token: string; contestId: string }
 
-  // All submissions for this contest
   const subsSnap = await db
     .collection('submissions')
-    .where('contestId', '==', judge.contestId)
+    .where('contestId', '==', judgeData.contestId)
     .orderBy('submittedAt', 'asc')
     .get()
 
-  // This judge's scores (keyed by submissionId)
   const scoresSnap = await db
     .collection('scores')
-    .where('judgeId', '==', judge.id)
+    .where('judgeId', '==', judgeDoc.id)
     .get()
 
   const myScores: Record<string, { average: number; breakdown: Record<string, number> }> = {}
@@ -39,5 +37,8 @@ export async function GET(req: NextRequest) {
     myScore: myScores[d.id] || null,
   }))
 
-  return NextResponse.json({ judge: { id: judge.id, name: judge.name, token }, submissions })
+  return NextResponse.json({
+    judge: { id: judgeDoc.id, name: judgeData.name, token: judgeData.token },
+    submissions
+  })
 }

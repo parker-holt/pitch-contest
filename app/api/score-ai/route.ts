@@ -46,4 +46,32 @@ Return ONLY valid JSON, no markdown, no preamble:
     ${METRICS.map(m => `"${m.id}": <number 0-10, 0.5 increments>`).join(',\n    ')}
   },
   "weightedAverage": <weighted mean using the metric weights, 1 decimal>,
-  "feedback": "<2-3 sentenc
+  "feedback": "<2-3 sentence constructive summary with specific strengths and one area to improve>"
+}`
+
+  try {
+    const msg = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 512,
+      messages: [{ role: 'user', content: prompt }]
+    })
+    const raw = msg.content
+      .filter(b => b.type === 'text')
+      .map(b => (b as { type: 'text'; text: string }).text)
+      .join('').replace(/```json|```/g, '').trim()
+    const result = JSON.parse(raw) as { scores: Record<string, number>; weightedAverage: number; feedback: string }
+    const aiScore100 = Math.round(result.weightedAverage * 10)
+    await subRef.update({
+      aiScore: aiScore100,
+      aiBreakdown: result.scores,
+      aiFeedback: result.feedback,
+      finalScore: aiScore100,
+      status: 'pending'
+    })
+    return NextResponse.json({ success: true, score: aiScore100 })
+  } catch (err) {
+    console.error('AI scoring failed:', err)
+    await subRef.update({ status: 'pending' })
+    return NextResponse.json({ error: 'AI scoring failed' }, { status: 500 })
+  }
+}

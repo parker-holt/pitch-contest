@@ -1,8 +1,8 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Nav from '@/components/Nav'
-import { db, submissionsCol, type Submission } from '@/lib/firebase'
-import { query, where, orderBy, onSnapshot } from '@/lib/firebase'
+import { db, type Submission } from '@/lib/firebase'
+import { collection, query, where, orderBy, onSnapshot, getDocs } from 'firebase/firestore'
 import { TEAMS } from '@/lib/config'
 
 const MEDALS = ['🥇', '🥈', '🥉']
@@ -14,25 +14,44 @@ function initials(name: string) {
 
 export default function Leaderboard() {
   const [subs, setSubs] = useState<Submission[]>([])
-  const [contestId, setContestId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  // Get active contest ID first
   useEffect(() => {
-    fetch('/api/contest').then(r => r.json()).then(d => setContestId(d.id)).catch(() => setContestId('default'))
+    async function setup() {
+      try {
+        const contestSnap = await getDocs(query(collection(db, 'contests'), where('isActive', '==', true)))
+        if (contestSnap.empty) {
+          setError('No active contest found.')
+          setLoading(false)
+          return
+        }
+        const contestId = contestSnap.docs[0].id
+
+        const q = query(
+          collection(db, 'submissions'),
+          where('contestId', '==', contestId),
+          orderBy('finalScore', 'desc')
+        )
+        const unsub = onSnapshot(q, snap => {
+          setSubs(snap.docs.map(d => ({ id: d.id, ...d.data() } as Submission)))
+          setLoading(false)
+        }, err => {
+          console.error(err)
+          setError('Failed to load leaderboard.')
+          setLoading(false)
+        })
+        return unsub
+      } catch (err) {
+        console.error(err)
+        setError('Failed to connect to database.')
+        setLoading(false)
+      }
+    }
+    let unsub: (() => void) | undefined
+    setup().then(u => { unsub = u })
+    return () => { if (unsub) unsub() }
   }, [])
-
-  // Live listener once we have contestId
-  useEffect(() => {
-    if (!contestId) return
-    const q = query(submissionsCol(), where('contestId', '==', contestId), orderBy('finalScore', 'desc'))
-    const unsub = onSnapshot(q, snap => {
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as Submission))
-      setSubs(data)
-      setLoading(false)
-    })
-    return unsub
-  }, [contestId])
 
   const totalScores = subs.reduce((a, s) => a + (s.judgeScoreCount || 0), 0)
 
@@ -48,7 +67,6 @@ export default function Leaderboard() {
           {subs.length} pitcher{subs.length !== 1 ? 's' : ''} · {totalScores} score{totalScores !== 1 ? 's' : ''} submitted
         </p>
 
-        {/* Team cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10, marginBottom: 20 }}>
           {TEAMS.map(t => {
             const tsubs = subs.filter(s => s.teamName === t.name)
@@ -74,8 +92,9 @@ export default function Leaderboard() {
           })}
         </div>
 
-        {/* Submission rows */}
         {loading && <p style={{ textAlign: 'center', color: 'var(--tl)', padding: 40 }}>Loading...</p>}
+        {error && <p style={{ textAlign: 'center', color: '#f87171', padding: 40 }}>{error}</p>}
+
         {subs.map((s, i) => {
           const ranked = s.finalScore !== null
           const medal = ranked ? (MEDALS[i] || `#${i + 1}`) : '🏅'
@@ -92,7 +111,7 @@ export default function Leaderboard() {
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {s.status === 'scoring' && <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 20, background: '#eaf9f6', color: '#1a9e86', border: '1px solid #b6ece3' }}>🤖 AI scoring...</span>}
                   {s.status !== 'scoring' && s.aiScore !== null && <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 20, background: '#eaf9f6', color: '#1a9e86', border: '1px solid #b6ece3' }}>🤖 AI: {(s.aiScore / 10).toFixed(1)}/10</span>}
-                  <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 20, background: '#eef4ff', color: 'var(--blue)', border: '1px solid #c3d9f7' }}>{s.judgeScoreCount || 0}/5 judges</span>
+                  <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 20, background: '#eef4ff', color: 'var(--blue)', border: '1px solid #c3d9f7' }}>{s.judgeScoreCount || 0}/4 judges</span>
                 </div>
               </div>
               <div style={{ textAlign: 'right', minWidth: 70 }}>
@@ -104,7 +123,7 @@ export default function Leaderboard() {
             </div>
           )
         })}
-        {!loading && subs.length === 0 && (
+        {!loading && !error && subs.length === 0 && (
           <p style={{ textAlign: 'center', color: 'var(--tl)', padding: 60, fontSize: 15 }}>No submissions yet — share the submit link to get started!</p>
         )}
       </div>

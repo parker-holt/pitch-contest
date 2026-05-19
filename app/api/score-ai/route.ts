@@ -3,6 +3,9 @@ import Anthropic from '@anthropic-ai/sdk'
 import { adminDb } from '@/lib/firebase-admin'
 import { METRICS } from '@/lib/config'
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export async function POST(req: NextRequest) {

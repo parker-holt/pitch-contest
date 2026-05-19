@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase-admin'
 import { JUDGE_NAMES } from '@/lib/config'
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function GET() {
   const db = adminDb()
   const snap = await db.collection('contests').where('isActive', '==', true).limit(1).get()

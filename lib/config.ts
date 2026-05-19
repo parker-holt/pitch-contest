@@ -33,7 +33,7 @@ export const METRICS = [
 
 // Seed judges — run the SQL below once in Supabase to create these rows,
 // or they're inserted automatically by the seed script.
-export const JUDGE_NAMES = ['Parker', 'Alex', 'Jordan', 'Riley', 'Morgan']
+export const JUDGE_NAMES = ['Parker', 'Jon', 'Laura', 'Tyler']
 
 // Weighting: how much AI score vs judge score matters
 export const AI_WEIGHT    = 0.30

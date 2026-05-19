@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, recomputeFinalScore } from '@/lib/firebase-admin'
 import { FieldValue } from 'firebase-admin/firestore'
+import { METRICS } from '@/lib/config'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -13,9 +14,17 @@ export async function POST(req: NextRequest) {
   const judgeSnap = await db.collection('judges').where('token', '==', judgeToken).limit(1).get()
   if (judgeSnap.empty) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
   const judge = judgeSnap.docs[0]
-  const values = Object.values(breakdown) as number[]
-  const average = values.reduce((a, b) => a + b, 0) / values.length
-  await db.collection('scores').doc(`${submissionId}_${judge.id}`).set({ submissionId, judgeId: judge.id, judgeName: (judge.data() as { name: string }).name, breakdown, average, submittedAt: FieldValue.serverTimestamp() })
+
+  const weightedAverage = METRICS.reduce((sum, m) => sum + (breakdown[m.id] ?? 0) * m.weight, 0)
+
+  await db.collection('scores').doc(`${submissionId}_${judge.id}`).set({
+    submissionId,
+    judgeId: judge.id,
+    judgeName: (judge.data() as { name: string }).name,
+    breakdown,
+    average: weightedAverage,
+    submittedAt: FieldValue.serverTimestamp()
+  })
   await recomputeFinalScore(submissionId)
   return NextResponse.json({ success: true })
 }

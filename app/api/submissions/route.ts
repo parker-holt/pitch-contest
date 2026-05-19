@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase-admin'
 import { FieldValue } from 'firebase-admin/firestore'
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function POST(req: NextRequest) {
   const { contestantName, teamName, driveLink, notes } = await req.json()
   if (!contestantName || !teamName || !driveLink)

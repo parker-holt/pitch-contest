@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, recomputeFinalScore } from '@/lib/firebase-admin'
 import { FieldValue } from 'firebase-admin/firestore'
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function POST(req: NextRequest) {
   const { submissionId, judgeToken, breakdown } = await req.json()
   if (!submissionId || !judgeToken || !breakdown)

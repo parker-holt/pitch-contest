@@ -17,23 +17,33 @@ export async function POST(req: NextRequest) {
   if (!subSnap.exists) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   const sub = subSnap.data() as { contestantName: string; teamName: string; driveLink: string; notes?: string }
   await subRef.update({ status: 'scoring' })
-  const prompt = `You are an expert sales pitch judge. Score this submission on each metric 0-10.
+
+  const metricList = METRICS.map((m, i) => `${i+1}. ${m.name} (weight: ${m.weight*100}%) — ${m.desc}`).join('\n')
+
+  const prompt = `You are an expert sales pitch judge. Score this submission on each metric from 0–10 (0.5 increments allowed).
+
 CONTESTANT: ${sub.contestantName}
 TEAM: ${sub.teamName}
 VIDEO: ${sub.driveLink}
-NOTES: ${sub.notes || 'None'}
-METRICS: ${METRICS.map((m, i) => `${i+1}. ${m.name}`).join(', ')}
-Return ONLY valid JSON no markdown: {"scores":{${METRICS.map(m => `"${m.id}":5`).join(',')}}, "average":5.0, "feedback":"2-3 sentence summary"}`
-  try {
-    const msg = await anthropic.messages.create({ model: 'claude-sonnet-4-20250514', max_tokens: 512, messages: [{ role: 'user', content: prompt }] })
-    const raw = msg.content.filter(b => b.type === 'text').map(b => (b as { type: 'text'; text: string }).text).join('').replace(/```json|```/g, '').trim()
-    const result = JSON.parse(raw) as { scores: Record<string, number>; average: number; feedback: string }
-    const aiScore100 = Math.round(result.average * 10)
-    await subRef.update({ aiScore: aiScore100, aiBreakdown: result.scores, aiFeedback: result.feedback, finalScore: aiScore100, status: 'pending' })
-    return NextResponse.json({ success: true, score: aiScore100 })
-  } catch (err) {
-    console.error('AI scoring failed:', err)
-    await subRef.update({ status: 'pending' })
-    return NextResponse.json({ error: 'AI scoring failed' }, { status: 500 })
-  }
-}
+NOTES: ${sub.notes || 'None provided'}
+
+SCORING METRICS:
+${metricList}
+
+SCORING GUIDE:
+- 9–10: Exceptional, best-in-class
+- 7–8: Strong, compelling with minor gaps
+- 5–6: Solid, gets the point across
+- 3–4: Developing, key elements weak
+- 0–2: Needs significant work
+
+Compute the WEIGHTED average using the weights above.
+Since you cannot watch the video directly, use the notes and context to infer quality. Use 5–6 as a neutral baseline when limited info is available.
+
+Return ONLY valid JSON, no markdown, no preamble:
+{
+  "scores": {
+    ${METRICS.map(m => `"${m.id}": <number 0-10, 0.5 increments>`).join(',\n    ')}
+  },
+  "weightedAverage": <weighted mean using the metric weights, 1 decimal>,
+  "feedback": "<2-3 sentenc

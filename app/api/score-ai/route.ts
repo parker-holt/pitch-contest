@@ -7,16 +7,16 @@ export const runtime = 'nodejs'
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY
 
-async function downloadFromDrive(fileId: string): Promise<Buffer> {
+async function downloadFromDrive(fileId: string): Promise<Uint8Array> {
   const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`
   const res = await fetch(url, { headers: { 'Accept': 'video/*' } })
   if (!res.ok) throw new Error(`Failed to download from Drive: ${res.status} ${res.statusText}`)
   const arrayBuffer = await res.arrayBuffer()
-  return Buffer.from(arrayBuffer)
+  return new Uint8Array(arrayBuffer)
 }
 
-async function uploadToGemini(videoBuffer: Buffer, mimeType: string): Promise<string> {
-  const numBytes = videoBuffer.length
+async function uploadToGemini(videoBytes: Uint8Array, mimeType: string): Promise<string> {
+  const numBytes = videoBytes.length
   const initRes = await fetch(
     `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${GEMINI_API_KEY}`,
     {
@@ -42,7 +42,7 @@ async function uploadToGemini(videoBuffer: Buffer, mimeType: string): Promise<st
       'X-Goog-Upload-Offset': '0',
       'X-Goog-Upload-Command': 'upload, finalize',
     },
-    body: videoBuffer
+    body: videoBytes
   })
   if (!uploadRes.ok) throw new Error(`Failed to upload file: ${await uploadRes.text()}`)
   const fileData = await uploadRes.json()
@@ -132,10 +132,10 @@ export async function POST(req: NextRequest) {
     const fileId = fileIdMatch[1]
 
     console.log(`Downloading video for ${sub.contestantName}...`)
-    const videoBuffer = await downloadFromDrive(fileId)
+    const videoBytes = await downloadFromDrive(fileId)
 
-    console.log(`Uploading to Gemini File API (${videoBuffer.length} bytes)...`)
-    const fileUri = await uploadToGemini(videoBuffer, 'video/mp4')
+    console.log(`Uploading to Gemini File API (${videoBytes.length} bytes)...`)
+    const fileUri = await uploadToGemini(videoBytes, 'video/mp4')
 
     console.log(`Scoring video...`)
     const result = await scoreVideo(fileUri, sub)

@@ -16,6 +16,11 @@ export default function Submit() {
       setError('Please fill in all required fields.')
       return
     }
+    const nameParts = name.trim().split(' ')
+    if (nameParts.length < 2 || !nameParts[1]) {
+      setError('Please enter your first and last name.')
+      return
+    }
     setError('')
     setLoading(true)
     try {
@@ -45,14 +50,14 @@ export default function Submit() {
           <h1 style={{ fontSize: 22, fontWeight: 700, color: 'white', marginBottom: 5 }}>Submit Your Pitch</h1>
           <p style={{ fontSize: 13.5, color: 'rgba(200,220,240,.65)', marginBottom: 26 }}>Record your pitch, then fill in your details below.</p>
 
-          <label style={{ display: 'block', fontSize: 10.5, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'rgba(200,218,238,.55)', marginBottom: 6 }}>Your name</label>
+          <label style={{ display: 'block', fontSize: 10.5, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'rgba(200,218,238,.55)', marginBottom: 6 }}>First &amp; Last Name</label>
           <input style={inputStyle} placeholder="First Last" value={name} onChange={e => setName(e.target.value)} />
 
           <label style={{ display: 'block', fontSize: 10.5, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'rgba(200,218,238,.55)', marginBottom: 6 }}>Select team</label>
           <div style={{ position: 'relative', marginBottom: 18 }}>
             <select value={team} onChange={e => setTeam(e.target.value)} style={{ ...inputStyle, marginBottom: 0, appearance: 'none', cursor: 'pointer' }}>
               <option value="">Select a team...</option>
-              {TEAMS.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}
+              {TEAMS.map(t => <option key={t.name} value={t.name}>{t.name} — {t.member}</option>)}
             </select>
             <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,.4)', pointerEvents: 'none' }}>▾</span>
           </div>

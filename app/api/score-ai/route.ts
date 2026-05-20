@@ -1,33 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
 import { adminDb } from '@/lib/firebase-admin'
 import { METRICS } from '@/lib/config'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY
 
-export async function POST(req: NextRequest) {
-  const { submissionId } = await req.json()
-  if (!submissionId) return NextResponse.json({ error: 'submissionId required' }, { status: 400 })
-  const db = adminDb()
-  const subRef = db.collection('submissions').doc(submissionId)
-  const subSnap = await subRef.get()
-  if (!subSnap.exists) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  const sub = subSnap.data() as { contestantName: string; teamName: string; driveLink: string; notes?: string }
-  await subRef.update({ status: 'scoring' })
-
+async function scoreWithGemini(sub: {
+  contestantName: string
+  teamName: string
+  driveLink: string
+  notes?: string
+}): Promise<{ scores: Record<string, number>; weightedAverage: number; feedback: string }> {
   const metricList = METRICS.map((m, i) => `${i+1}. ${m.name} (weight: ${m.weight*100}%) — ${m.desc}`).join('\n')
 
-  const prompt = `You are an expert sales pitch judge. Score this submission on each metric from 0–10 (0.5 increments allowed).
+  const prompt = `You are an expert sales pitch judge. Watch this video and score the presenter.
 
 CONTESTANT: ${sub.contestantName}
 TEAM: ${sub.teamName}
-VIDEO: ${sub.driveLink}
 NOTES: ${sub.notes || 'None provided'}
 
-SCORING METRICS:
+Score each metric from 0–10 (0.5 increments):
 ${metricList}
 
 SCORING GUIDE:
@@ -38,29 +32,79 @@ SCORING GUIDE:
 - 0–2: Needs significant work
 
 Compute the WEIGHTED average using the weights above.
-Since you cannot watch the video directly, use the notes and context to infer quality. Use 5–6 as a neutral baseline when limited info is available.
 
-Return ONLY valid JSON, no markdown, no preamble:
+Return ONLY valid JSON, no markdown:
 {
   "scores": {
     ${METRICS.map(m => `"${m.id}": <number 0-10, 0.5 increments>`).join(',\n    ')}
   },
-  "weightedAverage": <weighted mean using the metric weights, 1 decimal>,
+  "weightedAverage": <weighted mean, 1 decimal>,
   "feedback": "<2-3 sentence constructive summary with specific strengths and one area to improve>"
 }`
 
+  const fileIdMatch = sub.driveLink.match(/\/d\/([a-zA-Z0-9_-]+)/)
+  const fileId = fileIdMatch ? fileIdMatch[1] : null
+
+  let requestBody
+
+  if (fileId) {
+    requestBody = {
+      contents: [{
+        parts: [
+          {
+            file_data: {
+              mime_type: 'video/mp4',
+              file_uri: `https://drive.google.com/uc?export=download&id=${fileId}`
+            }
+          },
+          { text: prompt }
+        ]
+      }],
+      generationConfig: { temperature: 0.3, maxOutputTokens: 1024 }
+    }
+  } else {
+    requestBody = {
+      contents: [{ parts: [{ text: `Video URL: ${sub.driveLink}\n\n${prompt}` }] }],
+      generationConfig: { temperature: 0.3, maxOutputTokens: 1024 }
+    }
+  }
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${GEMINI_API_KEY}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody)
+    }
+  )
+
+  if (!res.ok) {
+    const err = await res.text()
+    throw new Error(`Gemini API error: ${err}`)
+  }
+
+  const data = await res.json()
+  const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+  const cleaned = raw.replace(/```json|```/g, '').trim()
+  return JSON.parse(cleaned)
+}
+
+export async function POST(req: NextRequest) {
+  const { submissionId } = await req.json()
+  if (!submissionId) return NextResponse.json({ error: 'submissionId required' }, { status: 400 })
+
+  const db = adminDb()
+  const subRef = db.collection('submissions').doc(submissionId)
+  const subSnap = await subRef.get()
+  if (!subSnap.exists) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  const sub = subSnap.data() as { contestantName: string; teamName: string; driveLink: string; notes?: string }
+  await subRef.update({ status: 'scoring' })
+
   try {
-    const msg = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 512,
-      messages: [{ role: 'user', content: prompt }]
-    })
-    const raw = msg.content
-      .filter(b => b.type === 'text')
-      .map(b => (b as { type: 'text'; text: string }).text)
-      .join('').replace(/```json|```/g, '').trim()
-    const result = JSON.parse(raw) as { scores: Record<string, number>; weightedAverage: number; feedback: string }
+    const result = await scoreWithGemini(sub)
     const aiScore100 = Math.round(result.weightedAverage * 10)
+
     await subRef.update({
       aiScore: aiScore100,
       aiBreakdown: result.scores,
@@ -68,9 +112,10 @@ Return ONLY valid JSON, no markdown, no preamble:
       finalScore: aiScore100,
       status: 'pending'
     })
+
     return NextResponse.json({ success: true, score: aiScore100 })
   } catch (err) {
-    console.error('AI scoring failed:', err)
+    console.error('Gemini scoring failed:', err)
     await subRef.update({ status: 'pending' })
     return NextResponse.json({ error: 'AI scoring failed' }, { status: 500 })
   }

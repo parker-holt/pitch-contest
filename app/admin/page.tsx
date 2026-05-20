@@ -46,10 +46,14 @@ export default function Admin() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ submissionId }),
       })
-      if (!res.ok) throw new Error('Failed')
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed')
+      }
       await loadData()
-    } catch {
-      alert('Re-scoring failed. Please try again.')
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Unknown error'
+      alert(`Re-scoring failed: ${msg}`)
     } finally {
       setRescoring(null)
     }

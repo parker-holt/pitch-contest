@@ -16,10 +16,6 @@ export default function Submit() {
       setError('Please fill in all required fields.')
       return
     }
-    if (!link.includes('drive.google.com')) {
-      setError('Please submit a Google Drive link. Make sure it is set to "Anyone with the link can view".')
-      return
-    }
     setError('')
     setLoading(true)
     try {
@@ -47,7 +43,7 @@ export default function Submit() {
       <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 20px', background: '#e6e9ef', minHeight: 'calc(100vh - 96px)' }}>
         <div style={{ background: 'var(--navy-card)', borderRadius: 18, padding: '32px 30px', width: '100%', maxWidth: 480, height: 'fit-content' }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: 'white', marginBottom: 5 }}>Submit Your Pitch</h1>
-          <p style={{ fontSize: 13.5, color: 'rgba(200,220,240,.65)', marginBottom: 26 }}>Record your pitch, upload to Google Drive, then fill in your details below.</p>
+          <p style={{ fontSize: 13.5, color: 'rgba(200,220,240,.65)', marginBottom: 26 }}>Record your pitch, then fill in your details below.</p>
 
           <label style={{ display: 'block', fontSize: 10.5, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'rgba(200,218,238,.55)', marginBottom: 6 }}>Your name</label>
           <input style={inputStyle} placeholder="First Last" value={name} onChange={e => setName(e.target.value)} />
@@ -61,10 +57,10 @@ export default function Submit() {
             <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,.4)', pointerEvents: 'none' }}>▾</span>
           </div>
 
-          <label style={{ display: 'block', fontSize: 10.5, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'rgba(200,218,238,.55)', marginBottom: 6 }}>Google Drive video link</label>
-          <input style={inputStyle} placeholder="https://drive.google.com/file/d/..." value={link} onChange={e => setLink(e.target.value)} />
+          <label style={{ display: 'block', fontSize: 10.5, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'rgba(200,218,238,.55)', marginBottom: 6 }}>Video link</label>
+          <input style={inputStyle} placeholder="https://..." value={link} onChange={e => setLink(e.target.value)} />
           <p style={{ fontSize: 12, color: 'rgba(255,255,255,.32)', marginTop: -14, marginBottom: 18 }}>
-            Make sure sharing is set to "Anyone with the link can view"
+            Paste a link to your pitch video (Google Drive, Loom, etc.)
           </p>
 
           {error && <p style={{ color: '#f87171', fontSize: 13, marginBottom: 12 }}>{error}</p>}

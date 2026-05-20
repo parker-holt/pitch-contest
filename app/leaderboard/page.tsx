@@ -8,6 +8,14 @@ import { TEAMS } from '@/lib/config'
 const MEDALS = ['🥇', '🥈', '🥉']
 const MEDAL_BORDER: Record<number, string> = { 0: '#e0b84a', 1: '#b0bec5', 2: '#cd8c50' }
 
+const TEAM_PHOTOS: Record<string, string> = {
+  'Kristin Wade':    '/kristinwade.jpeg',
+  'Ashley Leabsher': '/ashley laubscher.jpeg',
+  'Ashley Estrade':  '/ashley estrada.jpeg',
+  'Sean Ireland':    '/seanireland.jpeg',
+  'Christin Merkel': '/christinmerkel.jpeg',
+}
+
 function initials(name: string) {
   return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 }
@@ -55,10 +63,14 @@ export default function Leaderboard() {
             const tsubs = subs.filter(s => s.teamName === t.name)
             const scored = tsubs.filter(s => s.finalScore !== null)
             const avg = scored.length ? (scored.reduce((a, b) => a + (b.finalScore || 0), 0) / scored.length / 10).toFixed(2) : null
+            const photo = TEAM_PHOTOS[t.member]
             return (
               <div key={t.name} style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '18px 12px 14px', textAlign: 'center' }}>
-                <div style={{ width: 52, height: 52, borderRadius: '50%', margin: '0 auto 10px', background: '#dce6f2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, fontWeight: 700, color: 'var(--navy2)' }}>
-                  {initials(t.member)}
+                <div style={{ width: 52, height: 52, borderRadius: '50%', margin: '0 auto 10px', background: '#dce6f2', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, fontWeight: 700, color: 'var(--navy2)' }}>
+                  {photo
+                    ? <img src={photo} alt={t.member} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : initials(t.member)
+                  }
                 </div>
                 <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--blue)', lineHeight: 1.3, marginBottom: 2 }}>{t.name.toUpperCase()}</div>
                 <div style={{ fontSize: 12, color: 'var(--tm)', marginBottom: 10 }}>({t.member.split(' ')[0]})</div>

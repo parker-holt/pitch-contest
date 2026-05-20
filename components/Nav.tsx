@@ -1,10 +1,12 @@
 'use client'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 
-export default function Nav() {
+function NavInner() {
   const path = usePathname()
+  const params = useSearchParams()
+  const token = params.get('token') || ''
   const [time, setTime] = useState('')
 
   useEffect(() => {
@@ -17,9 +19,17 @@ export default function Nav() {
     return () => clearInterval(t)
   }, [])
 
+  const tokenSuffix = token ? `?token=${token}` : ''
+
+  const tabs = [
+    { href: `/leaderboard${tokenSuffix}`, label: '🏆 Leaderboard', match: '/leaderboard' },
+    { href: `/submit${tokenSuffix}`,      label: '🎤 Submit',      match: '/submit' },
+    ...(token ? [{ href: `/judge?token=${token}`, label: '⚖️ Judge Panel', match: '/judge' }] : []),
+    { href: `/admin${tokenSuffix}`,       label: '⚙️ Admin',       match: '/admin' },
+  ]
+
   return (
     <>
-      {/* Top bar */}
       <div style={{ background: 'var(--navy)', height: 40, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', fontSize: 12.5, color: '#b8ccdf' }}>
         <span>TruRisk Pitch &amp; Demo Contest</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -33,22 +43,17 @@ export default function Nav() {
         </div>
       </div>
 
-      {/* Nav bar */}
       <nav style={{ background: 'var(--navy2)', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 28px', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <img src="/nirvana-logo.png" alt="Nirvana" style={{ height: 32, width: 'auto' }} />
         </div>
 
         <div style={{ display: 'flex', gap: 2 }}>
-          {[
-            { href: '/leaderboard', label: '🏆 Leaderboard' },
-            { href: '/submit',      label: '🎤 Submit' },
-            { href: '/admin',       label: '⚙️ Admin' },
-          ].map(tab => (
+          {tabs.map(tab => (
             <Link key={tab.href} href={tab.href} style={{
               padding: '6px 16px', borderRadius: 20,
-              border: path === tab.href ? '1px solid rgba(255,255,255,.32)' : '1px solid transparent',
-              color: path === tab.href ? 'white' : 'rgba(255,255,255,.5)',
+              border: path === tab.match ? '1px solid rgba(255,255,255,.32)' : '1px solid transparent',
+              color: path === tab.match ? 'white' : 'rgba(255,255,255,.5)',
               fontSize: 13.5, fontWeight: 500, transition: 'all .15s',
             }}>
               {tab.label}
@@ -62,10 +67,18 @@ export default function Nav() {
         </div>
       </nav>
 
-      <style>{`
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.25} }
-      `}</style>
+      <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.25} }`}</style>
     </>
+  )
+}
+
+export default function Nav() {
+  return (
+    <Suspense fallback={
+      <div style={{ background: 'var(--navy)', height: 40 }} />
+    }>
+      <NavInner />
+    </Suspense>
   )
 }
 
@@ -73,8 +86,8 @@ async function downloadCSV() {
   const res = await fetch('/api/submissions')
   const data = await res.json()
   const rows = [['Name', 'Team', 'Score', 'Status', 'Link']]
-  data.forEach((s: { contestant_name: string; team_name: string; final_score: number | null; status: string; drive_link: string }) => {
-    rows.push([s.contestant_name, s.team_name, s.final_score?.toFixed(2) || '—', s.status, s.drive_link])
+  data.forEach((s: { contestantName: string; teamName: string; finalScore: number | null; status: string; driveLink: string }) => {
+    rows.push([s.contestantName, s.teamName, s.finalScore ? (s.finalScore / 10).toFixed(2) : '—', s.status, s.driveLink])
   })
   const a = document.createElement('a')
   a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(rows.map(r => r.join(',')).join('\n'))

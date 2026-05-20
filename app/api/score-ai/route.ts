@@ -7,20 +7,70 @@ export const runtime = 'nodejs'
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY
 
-async function scoreWithGemini(sub: {
-  contestantName: string
-  teamName: string
-  driveLink: string
-  notes?: string
-}): Promise<{ scores: Record<string, number>; weightedAverage: number; feedback: string }> {
-  const metricList = METRICS.map((m, i) => `${i+1}. ${m.name} (weight: ${m.weight*100}%) — ${m.desc}`).join('\n')
+async function downloadFromDrive(fileId: string): Promise<Buffer> {
+  const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`
+  const res = await fetch(url, { headers: { 'Accept': 'video/*' } })
+  if (!res.ok) throw new Error(`Failed to download from Drive: ${res.status} ${res.statusText}`)
+  const arrayBuffer = await res.arrayBuffer()
+  return Buffer.from(arrayBuffer)
+}
 
-  const prompt = `You are an expert sales pitch judge. Watch this video and score the presenter.
+async function uploadToGemini(videoBuffer: Buffer, mimeType: string): Promise<string> {
+  const numBytes = videoBuffer.length
+  const initRes = await fetch(
+    `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${GEMINI_API_KEY}`,
+    {
+      method: 'POST',
+      headers: {
+        'X-Goog-Upload-Protocol': 'resumable',
+        'X-Goog-Upload-Command': 'start',
+        'X-Goog-Upload-Header-Content-Length': numBytes.toString(),
+        'X-Goog-Upload-Header-Content-Type': mimeType,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ file: { display_name: 'pitch-video' } })
+    }
+  )
+  if (!initRes.ok) throw new Error(`Failed to initiate upload: ${await initRes.text()}`)
+  const uploadUrl = initRes.headers.get('x-goog-upload-url')
+  if (!uploadUrl) throw new Error('No upload URL returned')
+
+  const uploadRes = await fetch(uploadUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Length': numBytes.toString(),
+      'X-Goog-Upload-Offset': '0',
+      'X-Goog-Upload-Command': 'upload, finalize',
+    },
+    body: videoBuffer
+  })
+  if (!uploadRes.ok) throw new Error(`Failed to upload file: ${await uploadRes.text()}`)
+  const fileData = await uploadRes.json()
+  const fileUri = fileData.file?.uri
+  if (!fileUri) throw new Error('No file URI returned from Gemini')
+
+  let state = fileData.file?.state
+  const fileName = fileData.file?.name
+  let attempts = 0
+  while (state === 'PROCESSING' && attempts < 30) {
+    await new Promise(r => setTimeout(r, 2000))
+    const statusRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/${fileName}?key=${GEMINI_API_KEY}`)
+    const statusData = await statusRes.json()
+    state = statusData.state
+    attempts++
+  }
+  if (state !== 'ACTIVE') throw new Error(`File processing failed. State: ${state}`)
+  return fileUri
+}
+
+async function scoreVideo(fileUri: string, sub: { contestantName: string; teamName: string }): Promise<{ scores: Record<string, number>; weightedAverage: number; feedback: string }> {
+  const metricList = METRICS.map((m, i) => `${i+1}. ${m.name} (weight: ${m.weight*100}%) — ${m.desc}`).join('\n')
+  const prompt = `You are an expert sales pitch judge. Watch this video carefully and score the presenter.
 
 CONTESTANT: ${sub.contestantName}
 TEAM: ${sub.teamName}
 
-Score each metric from 0–10 (0.5 increments):
+Score each metric from 0–10 (0.5 increments allowed):
 ${metricList}
 
 SCORING GUIDE:
@@ -32,7 +82,7 @@ SCORING GUIDE:
 
 Compute the WEIGHTED average using the weights above.
 
-Return ONLY valid JSON, no markdown:
+Return ONLY valid JSON, no markdown, no preamble:
 {
   "scores": {
     ${METRICS.map(m => `"${m.id}": <number 0-10, 0.5 increments>`).join(',\n    ')}
@@ -41,47 +91,23 @@ Return ONLY valid JSON, no markdown:
   "feedback": "<2-3 sentence constructive summary with specific strengths and one area to improve>"
 }`
 
-  const fileIdMatch = sub.driveLink.match(/\/d\/([a-zA-Z0-9_-]+)/)
-  const fileId = fileIdMatch ? fileIdMatch[1] : null
-
-  let requestBody
-
-  if (fileId) {
-    requestBody = {
-      contents: [{
-        parts: [
-          {
-            file_data: {
-              mime_type: 'video/mp4',
-              file_uri: `https://drive.google.com/uc?export=download&id=${fileId}`
-            }
-          },
-          { text: prompt }
-        ]
-      }],
-      generationConfig: { temperature: 0.3, maxOutputTokens: 1024 }
-    }
-  } else {
-    requestBody = {
-      contents: [{ parts: [{ text: `Video URL: ${sub.driveLink}\n\n${prompt}` }] }],
-      generationConfig: { temperature: 0.3, maxOutputTokens: 1024 }
-    }
-  }
-
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            { file_data: { mime_type: 'video/mp4', file_uri: fileUri } },
+            { text: prompt }
+          ]
+        }],
+        generationConfig: { temperature: 0.3, maxOutputTokens: 1024 }
+      })
     }
   )
-
-  if (!res.ok) {
-    const err = await res.text()
-    throw new Error(`Gemini API error: ${err}`)
-  }
-
+  if (!res.ok) throw new Error(`Gemini scoring error: ${await res.text()}`)
   const data = await res.json()
   const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
   const cleaned = raw.replace(/```json|```/g, '').trim()
@@ -97,12 +123,24 @@ export async function POST(req: NextRequest) {
   const subSnap = await subRef.get()
   if (!subSnap.exists) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const sub = subSnap.data() as { contestantName: string; teamName: string; driveLink: string; notes?: string }
+  const sub = subSnap.data() as { contestantName: string; teamName: string; driveLink: string }
   await subRef.update({ status: 'scoring' })
 
   try {
-    const result = await scoreWithGemini(sub)
+    const fileIdMatch = sub.driveLink.match(/\/d\/([a-zA-Z0-9_-]+)/)
+    if (!fileIdMatch) throw new Error('Invalid Google Drive link.')
+    const fileId = fileIdMatch[1]
+
+    console.log(`Downloading video for ${sub.contestantName}...`)
+    const videoBuffer = await downloadFromDrive(fileId)
+
+    console.log(`Uploading to Gemini File API (${videoBuffer.length} bytes)...`)
+    const fileUri = await uploadToGemini(videoBuffer, 'video/mp4')
+
+    console.log(`Scoring video...`)
+    const result = await scoreVideo(fileUri, sub)
     const aiScore100 = Math.round(result.weightedAverage * 10)
+
     await subRef.update({
       aiScore: aiScore100,
       aiBreakdown: result.scores,
@@ -113,7 +151,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, score: aiScore100 })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    console.error('Gemini scoring failed:', msg)
+    console.error('AI scoring failed:', msg)
     await subRef.update({ status: 'pending' })
     return NextResponse.json({ error: msg }, { status: 500 })
   }

@@ -15,12 +15,13 @@ const JUDGE_TOKENS = [
 
 async function sendSlackAlert(contestantName: string, teamName: string, driveLink: string) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://pitch-contest.vercel.app'
+  console.log('Slack token exists:', !!process.env.SLACK_BOT_TOKEN)
 
   const judgeLinks = JUDGE_TOKENS.map(j =>
     `<${appUrl}/leaderboard?token=${j.token}|${j.name}>`
   ).join('  ·  ')
 
-  await fetch('https://slack.com/api/chat.postMessage', {
+  const res = await fetch('https://slack.com/api/chat.postMessage', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -51,6 +52,9 @@ async function sendSlackAlert(contestantName: string, teamName: string, driveLin
       ]
     })
   })
+
+  const data = await res.json()
+  console.log('Slack response:', JSON.stringify(data))
 }
 
 export async function POST(req: NextRequest) {
@@ -69,7 +73,7 @@ export async function POST(req: NextRequest) {
     judgeScoreCount: 0, status: 'pending', submittedAt: FieldValue.serverTimestamp(),
   })
 
-  sendSlackAlert(contestantName, teamName, driveLink).catch(console.error)
+  await sendSlackAlert(contestantName, teamName, driveLink)
 
   return NextResponse.json({ success: true, id: ref.id })
 }

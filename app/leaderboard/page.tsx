@@ -27,7 +27,6 @@ export default function Leaderboard() {
           return
         }
         const contestId = contestSnap.docs[0].id
-
         const q = query(
           collection(db, 'submissions'),
           where('contestId', '==', contestId),
@@ -107,11 +106,22 @@ export default function Leaderboard() {
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 15, fontWeight: 600 }}>{s.contestantName}</div>
-                <div style={{ fontSize: 12.5, color: 'var(--tm)', marginBottom: 4 }}>{s.teamName}</div>
+                <div style={{ fontSize: 12.5, color: 'var(--tm)', marginBottom: 5 }}>{s.teamName}</div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {s.status === 'scoring' && <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 20, background: '#eaf9f6', color: '#1a9e86', border: '1px solid #b6ece3' }}>🤖 AI scoring...</span>}
-                  {s.status !== 'scoring' && s.aiScore !== null && <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 20, background: '#eaf9f6', color: '#1a9e86', border: '1px solid #b6ece3' }}>🤖 AI: {(s.aiScore / 10).toFixed(1)}/10</span>}
-                  <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 20, background: '#eef4ff', color: 'var(--blue)', border: '1px solid #c3d9f7' }}>{s.judgeScoreCount || 0}/4 judges</span>
+                  {s.status === 'scoring' && (
+                    <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 20, background: '#eaf9f6', color: '#1a9e86', border: '1px solid #b6ece3' }}>🤖 AI scoring...</span>
+                  )}
+                  {s.status !== 'scoring' && s.aiScore !== null && (
+                    <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 20, background: '#eaf9f6', color: '#1a9e86', border: '1px solid #b6ece3', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                      🤖 <span style={{ fontWeight: 700 }}>{(s.aiScore / 10).toFixed(1)}</span>/10
+                    </span>
+                  )}
+                  {s.status !== 'scoring' && s.aiScore === null && (
+                    <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 20, background: '#f5f5f5', color: '#999', border: '1px solid #e0e0e0' }}>🤖 pending</span>
+                  )}
+                  <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 20, background: '#eef4ff', color: 'var(--blue)', border: '1px solid #c3d9f7', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                    ⚖️ <span style={{ fontWeight: 700 }}>{s.judgeScoreCount || 0}</span>/4 judges
+                  </span>
                 </div>
               </div>
               <div style={{ textAlign: 'right', minWidth: 70 }}>

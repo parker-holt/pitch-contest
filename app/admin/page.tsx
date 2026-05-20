@@ -1,17 +1,16 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Nav from '@/components/Nav'
-import { db, judgesCol, submissionsCol } from '@/lib/firebase'
+import { judgesCol, submissionsCol } from '@/lib/firebase'
 import { getDocs, query, orderBy } from 'firebase/firestore'
 
 type Judge = { id: string; name: string; token: string }
-type Sub = { id: string; contestantName: string; teamName: string; driveLink: string; finalScore: number | null; aiScore: number | null; status: string; submittedAt: string }
+type Sub = { id: string; contestantName: string; teamName: string; driveLink: string; finalScore: number | null; status: string; submittedAt: string }
 
 export default function Admin() {
   const [judges, setJudges] = useState<Judge[]>([])
   const [subs, setSubs] = useState<Sub[]>([])
   const [copied, setCopied] = useState<string | null>(null)
-  const [rescoring, setRescoring] = useState<string | null>(null)
   const [appUrl, setAppUrl] = useState('')
 
   async function loadData() {
@@ -20,8 +19,7 @@ export default function Admin() {
     })
     getDocs(query(submissionsCol(), orderBy('submittedAt', 'desc'))).then(snap => {
       setSubs(snap.docs.map(d => ({
-        id: d.id,
-        ...d.data(),
+        id: d.id, ...d.data(),
         submittedAt: d.data().submittedAt?.toDate?.()?.toISOString() || ''
       } as Sub)))
     })
@@ -36,27 +34,6 @@ export default function Admin() {
     navigator.clipboard.writeText(text).catch(() => {})
     setCopied(key)
     setTimeout(() => setCopied(null), 1500)
-  }
-
-  async function rescore(submissionId: string) {
-    setRescoring(submissionId)
-    try {
-      const res = await fetch('/api/score-ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ submissionId }),
-      })
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Failed')
-      }
-      await loadData()
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Unknown error'
-      alert(`Re-scoring failed: ${msg}`)
-    } finally {
-      setRescoring(null)
-    }
   }
 
   const card = { background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '18px 20px', marginBottom: 20 }
@@ -106,7 +83,7 @@ export default function Admin() {
             {subs.length > 0 && (
               <thead>
                 <tr>
-                  {['Name', 'Team', 'Video', 'AI Score', 'Final', 'Re-score'].map(h => (
+                  {['Name', 'Team', 'Video', 'Status', 'Score', 'Submitted'].map(h => (
                     <th key={h} style={{ textAlign: 'left', padding: '7px 10px', color: 'var(--tl)', fontWeight: 500, borderBottom: '1px solid var(--border)', fontSize: 11.5 }}>{h}</th>
                   ))}
                 </tr>
@@ -120,23 +97,12 @@ export default function Admin() {
                   <td style={{ padding: '10px', borderBottom: '1px solid #f0f2f5' }}>
                     <a href={s.driveLink} target="_blank" rel="noreferrer" style={{ color: 'var(--blue)', fontSize: 12 }}>📁 View</a>
                   </td>
-                  <td style={{ padding: '10px', borderBottom: '1px solid #f0f2f5' }}>
-                    {s.aiScore !== null
-                      ? <span style={{ color: '#1a9e86', fontWeight: 600 }}>🤖 {(s.aiScore / 10).toFixed(1)}/10</span>
-                      : <span style={{ color: '#999', fontSize: 12 }}>pending</span>
-                    }
-                  </td>
+                  <td style={{ padding: '10px', borderBottom: '1px solid #f0f2f5', color: s.status === 'scored' ? '#1a9e86' : 'var(--gold)', fontSize: 12 }}>{s.status}</td>
                   <td style={{ padding: '10px', borderBottom: '1px solid #f0f2f5', fontWeight: 600 }}>
                     {s.finalScore !== null ? (s.finalScore / 10).toFixed(2) : '—'}
                   </td>
-                  <td style={{ padding: '10px', borderBottom: '1px solid #f0f2f5' }}>
-                    <button
-                      onClick={() => rescore(s.id)}
-                      disabled={rescoring === s.id}
-                      style={{ background: rescoring === s.id ? '#e0e0e0' : '#eaf9f6', border: '1px solid #b6ece3', color: rescoring === s.id ? '#999' : '#1a9e86', padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: rescoring === s.id ? 'default' : 'pointer', fontFamily: 'inherit' }}
-                    >
-                      {rescoring === s.id ? '⏳ Scoring...' : '🤖 Re-score'}
-                    </button>
+                  <td style={{ padding: '10px', borderBottom: '1px solid #f0f2f5', color: 'var(--tl)', fontSize: 12 }}>
+                    {s.submittedAt ? new Date(s.submittedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
                   </td>
                 </tr>
               ))}

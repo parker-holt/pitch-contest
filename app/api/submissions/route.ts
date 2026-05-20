@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export async function POST(req: NextRequest) {
-  const { contestantName, teamName, driveLink, notes } = await req.json()
+  const { contestantName, teamName, driveLink } = await req.json()
   if (!contestantName || !teamName || !driveLink)
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   const db = adminDb()
@@ -14,12 +14,10 @@ export async function POST(req: NextRequest) {
   if (contestsSnap.empty) return NextResponse.json({ error: 'No active contest' }, { status: 404 })
   const contestId = contestsSnap.docs[0].id
   const ref = await db.collection('submissions').add({
-    contestId, contestantName, teamName, driveLink, notes: notes || null,
+    contestId, contestantName, teamName, driveLink, notes: null,
     aiScore: null, aiBreakdown: null, aiFeedback: null, finalScore: null,
     judgeScoreCount: 0, status: 'pending', submittedAt: FieldValue.serverTimestamp(),
   })
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-  fetch(`${appUrl}/api/score-ai`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ submissionId: ref.id }) }).catch(console.error)
   return NextResponse.json({ success: true, id: ref.id })
 }
 

@@ -24,10 +24,10 @@ export default function Nav() {
         <span>TruRisk Pitch &amp; Demo Contest</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span>{time}</span>
-          <button onClick={() => window.location.reload()} style={{ background: 'var(--gold)', color: '#000', border: 'none', padding: '4px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
+          <button onClick={() => window.location.reload()} style={{ background: 'var(--gold)', color: '#000', border: 'none', padding: '4px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
             Refresh
           </button>
-          <button onClick={() => downloadCSV()} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,.18)', color: '#b8ccdf', padding: '4px 12px', borderRadius: 20, fontSize: 12 }}>
+          <button onClick={() => downloadCSV()} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,.18)', color: '#b8ccdf', padding: '4px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
             ⬇ Download
           </button>
         </div>
@@ -35,11 +35,8 @@ export default function Nav() {
 
       {/* Nav bar */}
       <nav style={{ background: 'var(--navy2)', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 28px', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 7, background: 'linear-gradient(135deg,#3ecfb2,#2a7fc4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="white"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
-          </div>
-          <span style={{ fontSize: 15, fontWeight: 700, color: 'white', letterSpacing: '.01em' }}>NIRVANA</span>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <img src="/nirvana-logo.png" alt="Nirvana" style={{ height: 32, width: 'auto' }} />
         </div>
 
         <div style={{ display: 'flex', gap: 2 }}>

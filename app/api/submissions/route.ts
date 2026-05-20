@@ -17,8 +17,8 @@ async function sendSlackAlert(contestantName: string, teamName: string, driveLin
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://pitch-contest.vercel.app'
 
   const judgeLinks = JUDGE_TOKENS.map(j =>
-    `• <${appUrl}/leaderboard?token=${j.token}|${j.name}'s Judge Panel>`
-  ).join('\n')
+    `<${appUrl}/leaderboard?token=${j.token}|${j.name}>`
+  ).join('  ·  ')
 
   await fetch('https://slack.com/api/chat.postMessage', {
     method: 'POST',
@@ -28,28 +28,25 @@ async function sendSlackAlert(contestantName: string, teamName: string, driveLin
     },
     body: JSON.stringify({
       channel: SLACK_CHANNEL,
+      unfurl_links: false,
+      unfurl_media: false,
       text: `🎤 New pitch submitted!`,
       blocks: [
         {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `🎤 *New pitch submitted!*\n*${contestantName}* from *${teamName}* is ready to be scored.`
+            text: `🎤 *New pitch submitted!*\n*${contestantName}* · ${teamName}   <${driveLink}|▶ Watch Video>`
           }
         },
         {
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: `<${driveLink}|▶ Watch Video>`
-          }
-        },
-        {
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: `*Jump to your judge panel:*\n${judgeLinks}`
-          }
+          type: 'context',
+          elements: [
+            {
+              type: 'mrkdwn',
+              text: `Jump to your panel: ${judgeLinks}`
+            }
+          ]
         }
       ]
     })
@@ -72,7 +69,6 @@ export async function POST(req: NextRequest) {
     judgeScoreCount: 0, status: 'pending', submittedAt: FieldValue.serverTimestamp(),
   })
 
-  // Send Slack alert async — don't block the response
   sendSlackAlert(contestantName, teamName, driveLink).catch(console.error)
 
   return NextResponse.json({ success: true, id: ref.id })

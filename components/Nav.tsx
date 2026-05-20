@@ -45,7 +45,8 @@ function NavInner() {
 
       <nav style={{ background: 'var(--navy2)', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 28px', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          <img src="/nirvana-logo.png" alt="Nirvana" style={{ height: 32, width: 'auto' }} />
+          <img src="/nirvana-logo.svg" alt="Nirvana" style={{ height: 32, width: 'auto', filter: 'brightness(0) invert(1)' }} />
+
         </div>
 
         <div style={{ display: 'flex', gap: 2 }}>

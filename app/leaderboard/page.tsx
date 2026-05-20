@@ -21,31 +21,15 @@ export default function Leaderboard() {
     async function setup() {
       try {
         const contestSnap = await getDocs(query(collection(db, 'contests'), where('isActive', '==', true)))
-        if (contestSnap.empty) {
-          setError('No active contest found.')
-          setLoading(false)
-          return
-        }
+        if (contestSnap.empty) { setError('No active contest found.'); setLoading(false); return }
         const contestId = contestSnap.docs[0].id
-        const q = query(
-          collection(db, 'submissions'),
-          where('contestId', '==', contestId),
-          orderBy('finalScore', 'desc')
-        )
+        const q = query(collection(db, 'submissions'), where('contestId', '==', contestId), orderBy('finalScore', 'desc'))
         const unsub = onSnapshot(q, snap => {
           setSubs(snap.docs.map(d => ({ id: d.id, ...d.data() } as Submission)))
           setLoading(false)
-        }, err => {
-          console.error(err)
-          setError('Failed to load leaderboard.')
-          setLoading(false)
-        })
+        }, err => { console.error(err); setError('Failed to load leaderboard.'); setLoading(false) })
         return unsub
-      } catch (err) {
-        console.error(err)
-        setError('Failed to connect to database.')
-        setLoading(false)
-      }
+      } catch (err) { console.error(err); setError('Failed to connect to database.'); setLoading(false) }
     }
     let unsub: (() => void) | undefined
     setup().then(u => { unsub = u })
@@ -70,17 +54,13 @@ export default function Leaderboard() {
           {TEAMS.map(t => {
             const tsubs = subs.filter(s => s.teamName === t.name)
             const scored = tsubs.filter(s => s.finalScore !== null)
-            const avg = scored.length
-              ? (scored.reduce((a, b) => a + (b.finalScore || 0), 0) / scored.length / 10).toFixed(2)
-              : null
+            const avg = scored.length ? (scored.reduce((a, b) => a + (b.finalScore || 0), 0) / scored.length / 10).toFixed(2) : null
             return (
               <div key={t.name} style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '18px 12px 14px', textAlign: 'center' }}>
                 <div style={{ width: 52, height: 52, borderRadius: '50%', margin: '0 auto 10px', background: '#dce6f2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, fontWeight: 700, color: 'var(--navy2)' }}>
                   {initials(t.member)}
                 </div>
-                <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--blue)', lineHeight: 1.3, marginBottom: 2 }}>
-                  {t.name.toUpperCase()}
-                </div>
+                <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--blue)', lineHeight: 1.3, marginBottom: 2 }}>{t.name.toUpperCase()}</div>
                 <div style={{ fontSize: 12, color: 'var(--tm)', marginBottom: 10 }}>({t.member.split(' ')[0]})</div>
                 <div style={{ width: 28, height: 3, background: 'var(--gold)', borderRadius: 2, margin: '0 auto 7px' }} />
                 {avg ? <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{avg}</div>
@@ -106,23 +86,10 @@ export default function Leaderboard() {
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 15, fontWeight: 600 }}>{s.contestantName}</div>
-                <div style={{ fontSize: 12.5, color: 'var(--tm)', marginBottom: 5 }}>{s.teamName}</div>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {s.status === 'scoring' && (
-                    <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 20, background: '#eaf9f6', color: '#1a9e86', border: '1px solid #b6ece3' }}>🤖 AI scoring...</span>
-                  )}
-                  {s.status !== 'scoring' && s.aiScore !== null && (
-                    <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 20, background: '#eaf9f6', color: '#1a9e86', border: '1px solid #b6ece3', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                      🤖 <span style={{ fontWeight: 700 }}>{(s.aiScore / 10).toFixed(1)}</span>/10
-                    </span>
-                  )}
-                  {s.status !== 'scoring' && s.aiScore === null && (
-                    <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 20, background: '#f5f5f5', color: '#999', border: '1px solid #e0e0e0' }}>🤖 pending</span>
-                  )}
-                  <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 20, background: '#eef4ff', color: 'var(--blue)', border: '1px solid #c3d9f7', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                    ⚖️ <span style={{ fontWeight: 700 }}>{s.judgeScoreCount || 0}</span>/4 judges
-                  </span>
-                </div>
+                <div style={{ fontSize: 12.5, color: 'var(--tm)', marginBottom: 4 }}>{s.teamName}</div>
+                <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 20, background: '#eef4ff', color: 'var(--blue)', border: '1px solid #c3d9f7' }}>
+                  ⚖️ {s.judgeScoreCount || 0}/4 judges
+                </span>
               </div>
               <div style={{ textAlign: 'right', minWidth: 70 }}>
                 {ranked

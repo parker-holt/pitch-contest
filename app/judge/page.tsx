@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import Nav from '@/components/Nav'
 import { METRICS } from '@/lib/config'
 
 type Submission = {
@@ -64,21 +65,6 @@ function ScoringPanel({ sub, token, onDone }: { sub: Submission; token: string; 
           ▶ Watch
         </a>
       </div>
-
-      {sub.aiBreakdown && (
-        <div style={{ background: 'rgba(62,207,178,.08)', border: '1px solid rgba(62,207,178,.2)', borderRadius: 'var(--rs)', padding: '10px 14px', marginBottom: 18 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--teal)', marginBottom: 6 }}>🤖 AI pre-score</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3 }}>
-            {METRICS.map(m => (
-              <div key={m.id} style={{ fontSize: 11.5, color: 'rgba(200,218,238,.7)', display: 'flex', justifyContent: 'space-between' }}>
-                <span>{m.name.split(' ')[0]} <span style={{ opacity: .5 }}>({m.weight*100}%)</span></span>
-                <span style={{ fontWeight: 600, color: 'white' }}>{sub.aiBreakdown![m.id] ?? '—'}/10</span>
-              </div>
-            ))}
-          </div>
-          {sub.aiFeedback && <p style={{ fontSize: 11.5, color: 'rgba(200,218,238,.55)', marginTop: 7, lineHeight: 1.5 }}>{sub.aiFeedback}</p>}
-        </div>
-      )}
 
       {METRICS.map(m => (
         <div key={m.id} style={{ marginBottom: 18 }}>
@@ -194,13 +180,8 @@ function JudgePanel() {
                 </button>
               </div>
             </div>
-
             {scoringId === s.id && (
-              <ScoringPanel
-                sub={s}
-                token={token}
-                onDone={() => { setScoringId(null); load() }}
-              />
+              <ScoringPanel sub={s} token={token} onDone={() => { setScoringId(null); load() }} />
             )}
           </div>
         ))}
@@ -213,20 +194,7 @@ function JudgePanel() {
 export default function JudgePage() {
   return (
     <>
-      <div style={{ background: 'var(--navy)', height: 40, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', fontSize: 12.5, color: '#b8ccdf' }}>
-        <span>TruRisk Pitch &amp; Demo Contest</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--teal)' }}>
-          <div style={{ width: 8, height: 8, background: 'var(--teal)', borderRadius: '50%' }} /> LIVE
-        </div>
-      </div>
-      <div style={{ background: 'var(--navy2)', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 7, background: 'linear-gradient(135deg,#3ecfb2,#2a7fc4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="white"><path d="M3 18h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
-          </div>
-          <span style={{ fontSize: 15, fontWeight: 700, color: 'white' }}>NIRVANA · Judge Portal</span>
-        </div>
-      </div>
+      <Nav />
       <Suspense fallback={<div style={{ padding: 40, textAlign: 'center' }}>Loading...</div>}>
         <JudgePanel />
       </Suspense>

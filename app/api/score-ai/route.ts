@@ -19,7 +19,6 @@ async function scoreWithGemini(sub: {
 
 CONTESTANT: ${sub.contestantName}
 TEAM: ${sub.teamName}
-NOTES: ${sub.notes || 'None provided'}
 
 Score each metric from 0–10 (0.5 increments):
 ${metricList}
@@ -104,7 +103,6 @@ export async function POST(req: NextRequest) {
   try {
     const result = await scoreWithGemini(sub)
     const aiScore100 = Math.round(result.weightedAverage * 10)
-
     await subRef.update({
       aiScore: aiScore100,
       aiBreakdown: result.scores,
@@ -112,11 +110,11 @@ export async function POST(req: NextRequest) {
       finalScore: aiScore100,
       status: 'pending'
     })
-
     return NextResponse.json({ success: true, score: aiScore100 })
   } catch (err) {
-    console.error('Gemini scoring failed:', err)
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('Gemini scoring failed:', msg)
     await subRef.update({ status: 'pending' })
-    return NextResponse.json({ error: 'AI scoring failed' }, { status: 500 })
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

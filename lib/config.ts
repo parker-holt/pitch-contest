@@ -2,7 +2,7 @@ export const CONTEST_NAME = process.env.NEXT_PUBLIC_CONTEST_NAME || 'TruRisk Pit
 
 export const TEAMS = [
   { name: 'Krisy and the Risky Biscuits', member: 'Kristin Wade' },
-  { name: 'Triple A & Co.',               member: 'Ashley Leabsher' },
+  { name: 'The Barbell Baddies',               member: 'Ashley Leabsher' },
   { name: 'Team Blitz',                   member: 'Ashley Estrade' },
   { name: 'Team Pop',                     member: 'Sean Ireland' },
   { name: 'Re-Rate Rangers',              member: 'Christin Merkel' },

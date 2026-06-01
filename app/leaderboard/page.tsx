@@ -100,7 +100,7 @@ export default function Leaderboard() {
                 <div style={{ fontSize: 15, fontWeight: 600 }}>{s.contestantName}</div>
                 <div style={{ fontSize: 12.5, color: 'var(--tm)', marginBottom: 4 }}>{s.teamName}</div>
                 <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 20, background: '#eef4ff', color: 'var(--blue)', border: '1px solid #c3d9f7' }}>
-                  ⚖️ {s.judgeScoreCount || 0}/4 judges
+                  ⚖️ {s.judgeScoreCount || 0}/5 judges
                 </span>
               </div>
               <div style={{ textAlign: 'right', minWidth: 70 }}>

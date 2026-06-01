@@ -11,6 +11,7 @@ const JUDGE_TOKENS = [
   { name: 'Laura',  token: 'd5y5y2j2lf7' },
   { name: 'Jon',    token: 'fxmlzjkuq0g' },
   { name: 'Tyler',  token: 'ii1nbc5bawe' },
+  { name: 'Olivia',  token: 'olivia2026' }
 ]
 
 async function sendSlackAlert(contestantName: string, teamName: string, driveLink: string) {

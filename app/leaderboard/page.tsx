@@ -199,7 +199,7 @@ export default function Leaderboard() {
               </div>
             )}
             <div style={{ marginTop: 44, fontSize: 13, color: 'rgba(200,218,238,.35)' }}>
-              Scores are locked · {subs.length} pitches submitted · {totalScores} judge scores cast
+              Scores are being finalized · {subs.length} pitches submitted · {totalScores} judge scores cast
             </div>
           </div>
         )}

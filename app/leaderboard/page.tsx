@@ -134,7 +134,7 @@ export default function Leaderboard() {
         <h1 style={{ fontSize: 34, fontWeight: 700, color: 'var(--navy)', textAlign: 'center', letterSpacing: '-.02em', marginBottom: 7 }}>
           TruRisk Pitch &amp; Demo Contest
         </h1>
-        <p style={{ textAlign: 'center', color: 'var(--tm)', fontSize: 14, marginBottom: 4 }}>Live scores update as judges vote</p>
+        <p style={{ textAlign: 'center', color: 'var(--tm)', fontSize: 14, marginBottom: 4 }}>Scores are being updated by the judges</p>
         <p style={{ textAlign: 'center', color: 'var(--tl)', fontSize: 13, marginBottom: 30 }}>
           {subs.length} pitcher{subs.length !== 1 ? 's' : ''} · {totalScores} score{totalScores !== 1 ? 's' : ''} submitted
         </p>

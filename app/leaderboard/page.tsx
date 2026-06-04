@@ -164,29 +164,43 @@ export default function Leaderboard() {
         {loading && <p style={{ textAlign: 'center', color: 'var(--tl)', padding: 40 }}>Loading...</p>}
 
         {!revealed && !loading && (
-          <div style={{ textAlign: 'center', padding: '52px 20px', background: 'var(--white)', borderRadius: 'var(--r)', border: '1px solid var(--border)' }}>
-            <div style={{ fontSize: 40, marginBottom: 16 }}>🏆</div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--navy)', marginBottom: 8 }}>Results revealed at the offsite!</div>
-            <div style={{ fontSize: 15, color: 'var(--tm)', marginBottom: 40 }}>Tuesday night · New Orleans</div>
+          <div style={{ textAlign: 'center', padding: '52px 24px', background: 'linear-gradient(135deg, #0d1b2e 0%, #162236 100%)', borderRadius: 16, border: '1px solid rgba(255,255,255,.08)', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 400, height: 400, background: 'radial-gradient(circle, rgba(245,166,35,.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
+            <div style={{ fontSize: 56, marginBottom: 12, animation: 'float 3s ease-in-out infinite' }}>🏆</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: 'white', marginBottom: 8, letterSpacing: '-.02em' }}>
+              Results revealed at the offsite!
+            </div>
+            <div style={{ fontSize: 15, color: 'rgba(200,218,238,.6)', marginBottom: 44 }}>
+              📍 Tuesday night · New Orleans
+            </div>
             {countdown.done ? (
-              <div style={{ fontSize: 20, color: 'var(--teal)', fontWeight: 600 }}>It&apos;s time — waiting for the big reveal... 🎉</div>
+              <div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--gold)', animation: 'pulse2 1.2s ease-in-out infinite', marginBottom: 8 }}>🎉 It&apos;s time!</div>
+                <div style={{ fontSize: 16, color: 'rgba(200,218,238,.7)' }}>The winner is about to be revealed...</div>
+              </div>
             ) : (
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
                 {[
                   { val: countdown.days,    label: 'Days' },
                   { val: countdown.hours,   label: 'Hours' },
                   { val: countdown.minutes, label: 'Minutes' },
                   { val: countdown.seconds, label: 'Seconds' },
-                ].map(({ val, label }) => (
-                  <div key={label} style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 52, fontWeight: 800, color: 'var(--navy)', lineHeight: 1, minWidth: 72 }}>
-                      {String(val).padStart(2, '0')}
+                ].map(({ val, label }, i) => (
+                  <div key={label} style={{ display: 'flex', alignItems: 'center' }}>
+                    <div style={{ background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 12, padding: '16px 20px', minWidth: 80, textAlign: 'center' }}>
+                      <div style={{ fontSize: 48, fontWeight: 800, color: 'var(--gold)', lineHeight: 1 }}>
+                        {String(val).padStart(2, '0')}
+                      </div>
+                      <div style={{ fontSize: 10, color: 'rgba(200,218,238,.45)', marginTop: 8, textTransform: 'uppercase', letterSpacing: '.1em', fontWeight: 600 }}>{label}</div>
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--tl)', marginTop: 6, textTransform: 'uppercase', letterSpacing: '.08em' }}>{label}</div>
+                    {i < 3 && <div style={{ fontSize: 28, fontWeight: 700, color: 'rgba(255,255,255,.2)', margin: '0 4px', paddingBottom: 24 }}>:</div>}
                   </div>
                 ))}
               </div>
             )}
+            <div style={{ marginTop: 44, fontSize: 13, color: 'rgba(200,218,238,.35)' }}>
+              Scores are locked · {subs.length} pitches submitted · {totalScores} judge scores cast
+            </div>
           </div>
         )}
 
@@ -252,7 +266,11 @@ export default function Leaderboard() {
           </div>
         )}
       </div>
-      <style>{`@keyframes slideIn { from { opacity:0; transform:translateY(24px) scale(0.96); } to { opacity:1; transform:translateY(0) scale(1); } }`}</style>
+      <style>{`
+        @keyframes slideIn { from { opacity:0; transform:translateY(24px) scale(0.96); } to { opacity:1; transform:translateY(0) scale(1); } }
+        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+        @keyframes pulse2 { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.8;transform:scale(1.04)} }
+      `}</style>
     </>
   )
 }

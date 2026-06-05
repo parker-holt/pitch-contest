@@ -1,10 +1,10 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Nav from '@/components/Nav'
-import { submissionsCol, db } from '@/lib/firebase'
-import { getDocs, query, orderBy, doc, setDoc, onSnapshot } from 'firebase/firestore'
+import { submissionsCol, db, scoresCol } from '@/lib/firebase'
+import { getDocs, query, orderBy, where, doc, setDoc, onSnapshot } from 'firebase/firestore'
 
-type Sub = { id: string; contestantName: string; teamName: string; driveLink: string; finalScore: number | null; status: string; submittedAt: string }
+type Sub = { id: string; contestantName: string; teamName: string; driveLink: string; finalScore: number | null; status: string; submittedAt: string; judgeScoreCount: number }
 
 export default function Admin() {
   const [subs, setSubs] = useState<Sub[]>([])
@@ -15,8 +15,19 @@ export default function Admin() {
   const [revealing, setRevealing] = useState(false)
 
   async function loadData() {
-    getDocs(query(submissionsCol(), orderBy('submittedAt', 'desc'))).then(snap => {
-      setSubs(snap.docs.map(d => ({ id: d.id, ...d.data(), submittedAt: d.data().submittedAt?.toDate?.()?.toISOString() || '' } as Sub)))
+    getDocs(query(submissionsCol())).then(snap => {
+      const data = snap.docs.map(d => ({
+        id: d.id, ...d.data(),
+        submittedAt: d.data().submittedAt?.toDate?.()?.toISOString() || ''
+      } as Sub))
+      // Sort by finalScore descending, nulls last
+      data.sort((a, b) => {
+        if (a.finalScore === null && b.finalScore === null) return 0
+        if (a.finalScore === null) return 1
+        if (b.finalScore === null) return -1
+        return b.finalScore - a.finalScore
+      })
+      setSubs(data)
     })
   }
 
@@ -55,7 +66,7 @@ export default function Admin() {
     setRevealIndex(-1)
   }
 
-  const ranked = [...subs].filter(s => s.finalScore !== null).sort((a, b) => (b.finalScore || 0) - (a.finalScore || 0))
+  const ranked = [...subs].filter(s => s.finalScore !== null)
   const top5 = ranked.slice(0, 5)
   const nextToReveal = top5[4 - (revealIndex + 1)]
 
@@ -130,33 +141,42 @@ export default function Admin() {
           ))}
         </div>
 
-        <div style={sectionTitle}>Submissions ({subs.length})</div>
+        <div style={sectionTitle}>Submissions ({subs.length}) — sorted by score</div>
         <div style={card}>
           {subs.length === 0 && <p style={{ color: 'var(--tl)', fontSize: 13 }}>No submissions yet.</p>}
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             {subs.length > 0 && (
               <thead>
                 <tr>
-                  {['Name', 'Team', 'Video', 'Status', 'Score', 'Submitted'].map(h => (
+                  {['#', 'Name', 'Team', 'Video', 'Judges', 'Score'].map(h => (
                     <th key={h} style={{ textAlign: 'left', padding: '7px 10px', color: 'var(--tl)', fontWeight: 500, borderBottom: '1px solid var(--border)', fontSize: 11.5 }}>{h}</th>
                   ))}
                 </tr>
               </thead>
             )}
             <tbody>
-              {subs.map(s => (
+              {subs.map((s, i) => (
                 <tr key={s.id}>
-                  <td style={{ padding: '10px', borderBottom: '1px solid #f0f2f5', fontWeight: 500 }}>{s.contestantName}</td>
+                  <td style={{ padding: '10px', borderBottom: '1px solid #f0f2f5', color: 'var(--tl)', fontSize: 12 }}>
+                    {s.finalScore !== null ? `#${i + 1}` : '—'}
+                  </td>
+                  <td style={{ padding: '10px', borderBottom: '1px solid #f0f2f5', fontWeight: 500 }}>
+                    <a href={s.driveLink} target="_blank" rel="noreferrer" style={{ color: 'var(--td)', textDecoration: 'none' }}>{s.contestantName}</a>
+                  </td>
                   <td style={{ padding: '10px', borderBottom: '1px solid #f0f2f5', color: 'var(--tm)', fontSize: 12 }}>{s.teamName}</td>
                   <td style={{ padding: '10px', borderBottom: '1px solid #f0f2f5' }}>
-                    <a href={s.driveLink} target="_blank" rel="noreferrer" style={{ color: 'var(--blue)', fontSize: 12 }}>📁 View</a>
+                    <a href={s.driveLink} target="_blank" rel="noreferrer" style={{ color: 'var(--blue)', fontSize: 12 }}>📁</a>
                   </td>
-                  <td style={{ padding: '10px', borderBottom: '1px solid #f0f2f5', color: s.status === 'scored' ? '#1a9e86' : 'var(--gold)', fontSize: 12 }}>{s.status}</td>
-                  <td style={{ padding: '10px', borderBottom: '1px solid #f0f2f5', fontWeight: 600 }}>
+                  <td style={{ padding: '10px', borderBottom: '1px solid #f0f2f5' }}>
+                    <div style={{ display: 'flex', gap: 3 }}>
+                      {Array.from({ length: 5 }).map((_, j) => (
+                        <div key={j} style={{ width: 10, height: 10, borderRadius: '50%', background: j < (s.judgeScoreCount || 0) ? 'var(--teal)' : '#e0e0e0' }} />
+                      ))}
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--tl)', marginTop: 3 }}>{s.judgeScoreCount || 0}/5</div>
+                  </td>
+                  <td style={{ padding: '10px', borderBottom: '1px solid #f0f2f5', fontWeight: 700, color: s.finalScore !== null ? 'var(--td)' : 'var(--tl)' }}>
                     {s.finalScore !== null ? (s.finalScore / 10).toFixed(2) : '—'}
-                  </td>
-                  <td style={{ padding: '10px', borderBottom: '1px solid #f0f2f5', color: 'var(--tl)', fontSize: 12 }}>
-                    {s.submittedAt ? new Date(s.submittedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
                   </td>
                 </tr>
               ))}

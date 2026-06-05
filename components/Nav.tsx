@@ -25,7 +25,7 @@ function NavInner() {
     { href: `/leaderboard${tokenSuffix}`, label: '🏆 Leaderboard', match: '/leaderboard' },
     { href: `/submit${tokenSuffix}`,      label: '🎤 Submit',      match: '/submit' },
     ...(token ? [{ href: `/judge?token=${token}`, label: '⚖️ Judge Panel', match: '/judge' }] : []),
-    { href: `/admin${tokenSuffix}`,       label: '⚙️ Admin',       match: '/admin' },
+    ...(token ? [{ href: `/admin?token=${token}`, label: '⚙️ Admin', match: '/admin' }] : []),
   ]
 
   return (
@@ -45,7 +45,7 @@ function NavInner() {
 
       <nav style={{ background: 'var(--navy2)', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 28px', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          <img src="/White Logo.png" alt="Nirvana" style={{ height: 32, width: 'auto' }} />
+          <img src="/White_Logo.png" alt="Nirvana" style={{ height: 32, width: 'auto' }} />
         </div>
 
         <div style={{ display: 'flex', gap: 2 }}>
@@ -74,9 +74,7 @@ function NavInner() {
 
 export default function Nav() {
   return (
-    <Suspense fallback={
-      <div style={{ background: 'var(--navy)', height: 40 }} />
-    }>
+    <Suspense fallback={<div style={{ background: 'var(--navy)', height: 40 }} />}>
       <NavInner />
     </Suspense>
   )

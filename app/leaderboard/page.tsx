@@ -16,7 +16,7 @@ const TEAM_PHOTOS: Record<string, string> = {
   'Christin Merkel': '/christinmerkel.jpeg',
 }
 
-const REVEAL_DATE = new Date('2026-06-11T01:30:00Z')
+const REVEAL_DATE = new Date('2026-06-10T01:30:00Z')
 
 function initials(name: string) {
   return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
